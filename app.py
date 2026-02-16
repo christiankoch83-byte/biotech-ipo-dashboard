@@ -7,7 +7,7 @@ import streamlit as st
 import pandas as pd
 import yfinance as yf
 import plotly.graph_objects as go
-import plotly.express as px
+import plotly.express as p
 from datetime import datetime, timedelta
 import numpy as np
 
@@ -167,7 +167,6 @@ LAYOUT_DEFAULTS = dict(
     margin=dict(l=50, r=20, t=30, b=40),
     xaxis=dict(gridcolor=BORDER, zerolinecolor=BORDER),
     yaxis=dict(gridcolor=BORDER, zerolinecolor=BORDER),
-    legend=dict(font=dict(size=11)),
     hoverlabel=dict(bgcolor=SURFACE, font_size=12),
 )
 
