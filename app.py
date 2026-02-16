@@ -165,8 +165,6 @@ LAYOUT_DEFAULTS = dict(
     plot_bgcolor=SURFACE,
     font=dict(color=DIM, size=11),
     margin=dict(l=50, r=20, t=30, b=40),
-    xaxis=dict(gridcolor=BORDER, zerolinecolor=BORDER),
-    yaxis=dict(gridcolor=BORDER, zerolinecolor=BORDER),
     hoverlabel=dict(bgcolor=SURFACE, font_size=12),
 )
 
