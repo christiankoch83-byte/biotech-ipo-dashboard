@@ -505,13 +505,13 @@ def main():
             """, unsafe_allow_html=True)
 
     st.markdown("---")
-        st.caption(
-        "Sources: [BioPharma Dive](https://www.biopharmadive.com) · "
-        "[BioBucks](https://www.biobucks.co) · "
-        "[BioSpace](https://www.biospace.com) · "
-        "[Fierce Biotech](https://www.fiercebiotech.com) · "
-        "Live prices via [Yahoo Finance](https://finance.yahoo.com)  \n"
-        "Not investment advice. Returns calculated from offer price."
+    st.caption(
+    "Sources: [BioPharma Dive](https://www.biopharmadive.com) · "
+    "[BioBucks](https://www.biobucks.co) · "
+    "[BioSpace](https://www.biospace.com) · "
+    "[Fierce Biotech](https://www.fiercebiotech.com) · "
+    "Live prices via [Yahoo Finance](https://finance.yahoo.com)  \n"
+    "Not investment advice. Returns calculated from offer price."
     )
 
 
