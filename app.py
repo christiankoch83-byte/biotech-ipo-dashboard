@@ -300,7 +300,7 @@ def main():
             height=400,
             yaxis=dict(title="Deals", gridcolor=BORDER, dtick=1),
             yaxis2=dict(title="Proceeds ($M)", overlaying="y", side="right", gridcolor="rgba(0,0,0,0)",
-                        tickprefix="$", ticksuffix="M", titlefont=dict(color=ORANGE), tickfont=dict(color=ORANGE)),
+                        tickprefix="$", ticksuffix="M", title_font=dict(color=ORANGE), tickfont=dict(color=ORANGE)),
             legend=dict(orientation="h", y=1.12, x=0),
         )
         st.plotly_chart(fig, use_container_width=True)
