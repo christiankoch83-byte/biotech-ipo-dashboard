@@ -1,6 +1,7 @@
 """
-Biotech IPO Dashboard — 2025-2026 YTD
+Biotech IPO Dashboard — 2020-2026 YTD
 Real-time pricing via yfinance. Shareable via Streamlit Cloud.
+Data loaded from deals.json with pending IPO tracking.
 """
 
 import streamlit as st
@@ -10,6 +11,8 @@ import plotly.graph_objects as go
 import plotly.express as p
 from datetime import datetime, timedelta
 import numpy as np
+import json
+import os
 
 # ──────────────────────────────────────────────
 # PAGE CONFIG
@@ -53,33 +56,30 @@ st.markdown("""
         font-size: 13px;
     }
     .stTabs [aria-selected="true"] { background: #4f8cff !important; border-color: #4f8cff !important; }
+    .pending-ipo-box {
+        background: rgba(245,158,11,0.06);
+        border: 1px solid rgba(245,158,11,0.3);
+        border-radius: 8px;
+        padding: 12px 16px;
+        margin-bottom: 8px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 
 # ──────────────────────────────────────────────
-# IPO DEAL DATA (static — pricing, proceeds, etc.)
 # ──────────────────────────────────────────────
-DEALS = [
-    # 2025
-    dict(year=2025, company="Ascentage Pharma",      ticker="AAPG", date="2025-01-24", area="Oncology",              offer=17.25, proceeds=126.4,  pricing="Below",  status="Inline",  phase="Commercial",   range_lo=None, range_hi=None),
-    dict(year=2025, company="Metsera",               ticker="MTSR", date="2025-01-30", area="Obesity",               offer=18.00, proceeds=316.2,  pricing="Above",  status="Upsized", phase="Phase 2",      range_lo=15, range_hi=17),
-    dict(year=2025, company="Maze Therapeutics",      ticker="MAZE", date="2025-01-31", area="Nephrology",            offer=16.00, proceeds=140.0,  pricing="At",     status="Upsized", phase="Phase 2",      range_lo=15, range_hi=17),
-    dict(year=2025, company="Sionna Therapeutics",    ticker="SION", date="2025-02-07", area="Cystic Fibrosis",       offer=18.00, proceeds=191.0,  pricing="At Top", status="Upsized", phase="Phase 2",      range_lo=16, range_hi=18),
-    dict(year=2025, company="Aardvark Therapeutics",  ticker="AARD", date="2025-02-13", area="Obesity / Rare",        offer=16.00, proceeds=94.2,   pricing="Below",  status="Inline",  phase="Phase 1",      range_lo=16, range_hi=18),
-    dict(year=2025, company="Advanced Biomed",        ticker="ADVB", date="2025-03-07", area="Oncology",              offer=4.00,  proceeds=6.6,    pricing="At",     status="Inline",  phase="Preclinical",  range_lo=None, range_hi=None),
-    dict(year=2025, company="Cuprina Holdings",       ticker="CUPR", date="2025-04-15", area="Wound Care",            offer=4.00,  proceeds=12.0,   pricing="At",     status="Inline",  phase="Phase 2",      range_lo=None, range_hi=None),
-    dict(year=2025, company="LB Pharmaceuticals",     ticker="LBRX", date="2025-09-11", area="Neuroscience",          offer=15.00, proceeds=285.0,  pricing="At",     status="Upsized", phase="Phase 2/3",    range_lo=14, range_hi=16),
-    dict(year=2025, company="MapLight Therapeutics",   ticker="MPLT", date="2025-10-27", area="CNS",                   offer=17.00, proceeds=296.3,  pricing="At",     status="Inline",  phase="Phase 2",      range_lo=None, range_hi=None),
-    dict(year=2025, company="BillionToOne",           ticker="BLLN", date="2025-11-06", area="Diagnostics",           offer=60.00, proceeds=273.1,  pricing="Above",  status="Upsized", phase="Commercial",   range_lo=None, range_hi=None),
-    dict(year=2025, company="Evommune",               ticker="EVMN", date="2025-11-06", area="Immunology",            offer=16.00, proceeds=172.5,  pricing="At",     status="Inline",  phase="Phase 2",      range_lo=15, range_hi=17),
-    # 2026
-    dict(year=2026, company="Aktis Oncology",         ticker="AKTS", date="2026-01-09", area="Oncology (Radiopharma)",offer=18.00, proceeds=365.4,  pricing="At Top", status="Upsized", phase="Phase 1b",     range_lo=16, range_hi=18),
-    dict(year=2026, company="Veradermics",            ticker="MANE", date="2026-02-04", area="Dermatology",           offer=17.00, proceeds=256.3,  pricing="Above",  status="Upsized", phase="Phase 3",      range_lo=14, range_hi=16),
-    dict(year=2026, company="Eikon Therapeutics",     ticker="EIKN", date="2026-02-05", area="Oncology",              offer=18.00, proceeds=381.0,  pricing="At Top", status="Upsized", phase="Phase 1",      range_lo=16, range_hi=18),
-    dict(year=2026, company="AgomAb Therapeutics",    ticker="AGMB", date="2026-02-06", area="GI / Immunology",       offer=16.00, proceeds=200.0,  pricing="At",     status="Inline",  phase="Phase 2",      range_lo=None, range_hi=None),
-    dict(year=2026, company="SpyGlass Pharma",        ticker="SGP",  date="2026-02-07", area="Ophthalmology",         offer=16.00, proceeds=150.0,  pricing="At",     status="Inline",  phase="Phase 3",      range_lo=None, range_hi=None),
-]
+# DATA LOADING
+# ──────────────────────────────────────────────
+def load_deals_from_json():
+    """Load IPO deal data from deals.json file."""
+    try:
+        if os.path.exists("deals.json"):
+            with open("deals.json", "r") as f:
+                return json.load(f)
+    except Exception as e:
+        st.warning(f"Could not load deals.json: {e}. Using fallback data.")
+    return []
 
 
 # ──────────────────────────────────────────────
@@ -122,15 +122,19 @@ def build_dataframe(deals: list[dict], prices: dict) -> pd.DataFrame:
     """Merge deal data with live prices and calculate return windows."""
     rows = []
     for d in deals:
-        t = d["ticker"]
+        t = d.get("ticker")
         p = prices.get(t, {})
         current = p.get("current")
         hist = p.get("history", pd.DataFrame())
 
-        day1 = calc_return_at_offset(hist, d["date"], d["offer"], 1)
-        week1 = calc_return_at_offset(hist, d["date"], d["offer"], 5)
-        month1 = calc_return_at_offset(hist, d["date"], d["offer"], 21)
-        itd = round((current / d["offer"] - 1) * 100, 1) if current else None
+        # Only calculate returns for active IPOs
+        if d.get("ipo_status") == "active" and d.get("offer"):
+            day1 = calc_return_at_offset(hist, d["date"], d["offer"], 1)
+            week1 = calc_return_at_offset(hist, d["date"], d["offer"], 5)
+            month1 = calc_return_at_offset(hist, d["date"], d["offer"], 21)
+            itd = round((current / d["offer"] - 1) * 100, 1) if current else None
+        else:
+            day1 = week1 = month1 = itd = None
 
         rows.append({
             **d,
@@ -183,11 +187,14 @@ def fmt_ret(v):
 # MAIN APP
 # ──────────────────────────────────────────────
 def main():
+    # Load deals
+    deals_raw = load_deals_from_json()
+    
     # Header
     col_title, col_refresh = st.columns([4, 1])
     with col_title:
         st.markdown("# 🧬 Biotech **IPO** Dashboard")
-        st.caption(f"2025 — 2026 YTD  |  Prices refresh every 15 min  |  Last fetch: {datetime.now().strftime('%b %d, %Y %H:%M')}")
+        st.caption(f"2020 — 2026 YTD  |  Prices refresh every 15 min  |  Last fetch: {datetime.now().strftime('%b %d, %Y %H:%M')}")
     with col_refresh:
         st.markdown("<br>", unsafe_allow_html=True)
         if st.button("🔄 Refresh prices", use_container_width=True):
@@ -205,13 +212,18 @@ def main():
     """, unsafe_allow_html=True)
 
     # Fetch live data
-    tickers = [d["ticker"] for d in DEALS]
+    active_deals = [d for d in deals_raw if d.get("ipo_status") == "active"]
+    tickers = [d["ticker"] for d in active_deals]
     with st.spinner("Fetching live prices..."):
         prices = fetch_live_prices(tickers)
-    df = build_dataframe(DEALS, prices)
+    df = build_dataframe(active_deals, prices)
 
     # Year filter
-    year_filter = st.radio("Filter", ["All", "2025", "2026"], horizontal=True, label_visibility="collapsed")
+    years_available = sorted(df["year"].unique())
+    year_options = ["All"] + [str(y) for y in years_available]
+    
+    # Year filter
+    year_filter = st.radio("Filter", year_options, horizontal=True, label_visibility="collapsed")
     if year_filter != "All":
         df = df[df["year"] == int(year_filter)]
 
@@ -475,7 +487,25 @@ def main():
 
     # ── FOOTER ──────────────────────────────
     st.markdown("---")
-    st.caption(
+    # ── PENDING IPOs SECTION ────────────────────────
+    pending_deals = [d for d in deals_raw if d.get("ipo_status") == "pending"]
+    if pending_deals:
+        st.markdown("---")
+        st.markdown("### Pending IPOs (Filed but not yet trading)")
+        st.markdown("These companies have filed S-1s and are awaiting IPO launch.")
+        for deal in sorted(pending_deals, key=lambda x: x.get("date", ""), reverse=True):
+            st.markdown(f"""
+            <div class="pending-ipo-box">
+                <strong>{deal.get('company', 'Unknown')}</strong> \u2022 {deal.get('ticker', '?')}
+                <br/>
+                <span style="font-size:12px;color:#8b8fa3;">
+                    {deal.get('area', 'Unknown')} | Filed: {deal.get('date', 'Unknown')}
+                </span>
+            </div>
+            """, unsafe_allow_html=True)
+
+    st.markdown("---")
+        st.caption(
         "Sources: [BioPharma Dive](https://www.biopharmadive.com) · "
         "[BioBucks](https://www.biobucks.co) · "
         "[BioSpace](https://www.biospace.com) · "
