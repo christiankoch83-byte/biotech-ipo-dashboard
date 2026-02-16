@@ -417,17 +417,22 @@ def main():
             st.plotly_chart(fig, use_container_width=True)
 
         with c2:
-            # Risk appetite gauge
+            # Risk appetite gauge — with data density factor
             pct_upsized = n_upsized / n if n else 0
             pct_above = n_above / n if n else 0
             pct_above_offer = n_above_offer / n if n else 0
-            d1_score = min(25, max(0, (avg_day1 + 10) / 50 * 25))
-            ups_score = pct_upsized * 20
-            abv_score = pct_above * 20
-            itd_score = min(20, max(0, (avg_itd + 10) / 100 * 20))
-            hold_score = pct_above_offer * 15
-            score = min(100, max(0, round(d1_score + ups_score + abv_score + itd_score + hold_score)))
+            d1_score = min(25, max(0, (avg_day1 + 10) / 50 * 25))    # max 25 — Day-1 return signal
+            ups_score = pct_upsized * 20                               # max 20 — % deals upsized
+            abv_score = pct_above * 20                                 # max 20 — % priced above range
+            itd_score = min(20, max(0, (avg_itd + 10) / 100 * 20))   # max 20 — IPO-to-date return
+            hold_score = pct_above_offer * 15                          # max 15 — % still above offer
+            raw_score = d1_score + ups_score + abv_score + itd_score + hold_score
+            # Data density: penalize small samples (full confidence at N >= 15)
+            density_factor = min(1.0, n / 15)
+            score = min(100, max(0, round(raw_score * density_factor)))
             label = "Strong" if score >= 70 else "Constructive" if score >= 50 else "Cautious" if score >= 30 else "Risk-Off"
+            if density_factor < 0.6:
+                label += " (Low N)"
             gauge_color = GREEN if score >= 60 else ORANGE if score >= 40 else RED
 
             fig = go.Figure(go.Indicator(
@@ -450,6 +455,14 @@ def main():
             ))
             fig.update_layout(paper_bgcolor=BG, font=dict(color=DIM), height=300, margin=dict(l=30, r=30, t=50, b=20))
             st.plotly_chart(fig, use_container_width=True)
+
+            # Score breakdown tooltip
+            st.caption(
+                f"**Score Breakdown** (N={n}, density={density_factor:.0%}):  \n"
+                f"Day-1 Return: {d1_score:.1f}/25 · Upsized: {ups_score:.1f}/20 · "
+                f"Above Range: {abv_score:.1f}/20 · ITD Return: {itd_score:.1f}/20 · "
+                f"Above Offer: {hold_score:.1f}/15 → Raw {raw_score:.0f} × {density_factor:.0%} = **{score}**"
+            )
 
     st.markdown("---")
 
