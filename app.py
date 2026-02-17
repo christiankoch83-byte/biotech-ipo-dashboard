@@ -223,7 +223,8 @@ def main():
     year_options = ["All"] + [str(y) for y in years_available]
     
     # Year filter
-    year_filter = st.radio("Filter", year_options, horizontal=True, label_visibility="collapsed")
+    default_idx = year_options.index("2026") if "2026" in year_options else 0
+    year_filter = st.radio("Filter", year_options, index=default_idx, horizontal=True, label_visibility="collapsed")
     if year_filter != "All":
         df = df[df["year"] == int(year_filter)]
 
